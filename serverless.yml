@@ -1,0 +1,42 @@
+service: shopify-custom-price
+useDotenv: true
+
+provider:
+  name: aws
+  runtime: nodejs20.x
+  environment:
+    SHOPIFY_ACCESS_TOKEN: ${env:SHOPIFY_ACCESS_TOKEN}
+    SHOPIFY_STORE_URL: ${env:SHOPIFY_STORE_URL}
+
+functions:
+  createSizeVariant:
+    handler: handler.createSizeVariant
+    events:
+      - http:
+          path: create-size-variant
+          method: post
+          cors:
+            origin: 'https://wallartiful.com'
+            headers:
+              - Content-Type
+              - X-Amz-Date
+              - Authorization
+              - X-Api-Key
+              - X-Amz-Security-Token
+              - X-Amz-User-Agent
+  deleteSizeVariant:
+    handler: handler.deleteSizeVariant
+    events:
+      - http:
+          path: delete-size-variant
+          method: post
+  orderComplete:
+    handler: handler.orderComplete
+    events:
+      - http:
+          path: order-complete
+          method: post
+
+plugins:
+  - serverless-offline
+  - serverless-dotenv-plugin
