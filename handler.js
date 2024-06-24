@@ -61,6 +61,7 @@ app.post('/create-size-variant', async (req, res) => {
           inventory_management: null,
           option1: size,
           option2: material,
+          barcode: 'tmp'
         },
       };
 
@@ -109,6 +110,36 @@ app.post('/order-complete', async (req, res) => {
   res.status(200).send();
 });
 
+app.post('/delete-old-variants', async (req, res) => {
+  try {
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+    const response = await axios.get(`${process.env.SHOPIFY_STORE_URL}/admin/api/2021-07/variants.json`, {
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Shopify-Access-Token': process.env.SHOPIFY_ACCESS_TOKEN
+      },
+      timeout: 120000
+    });
+
+    const oldVariants = response.data.variants.filter(variant => {
+      const createdAt = new Date(variant.created_at);
+      const barcode = variant.barcode;
+      return createdAt < sevenDaysAgo && barcode == 'tmp';
+    });
+
+    console.log(oldVariants)
+    const deletePromises = oldVariants.map(variant => deleteVariant(variant.id));
+    await Promise.all(deletePromises);
+
+    console.log(`Deleted ${oldVariants.length} old variants.`);
+    res.status(200).send();
+  } catch (error) {
+    console.error('Error deleting old variants:', error);
+    res.status(500).json({ error: 'Error deleting old variants.' });
+  }
+});
 
 app.use((req, res, next) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -121,6 +152,7 @@ app.use((req, res, next) => {
 module.exports.createSizeVariant = serverless(app);
 module.exports.deleteSizeVariant = serverless(app);
 module.exports.orderComplete = serverless(app);
+module.exports.deleteOldVariants = serverless(app);
 
 const deleteVariant = async (variantId) => {
   try {

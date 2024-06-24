@@ -22,6 +22,7 @@ custom:
 functions:
   createSizeVariant:
     handler: handler.createSizeVariant
+    timeout: 300
     events:
       - http:
           path: create-size-variant
@@ -29,6 +30,7 @@ functions:
           cors: *corsConfig
   deleteSizeVariant:
     handler: handler.deleteSizeVariant
+    timeout: 300
     events:
       - http:
           path: delete-size-variant
@@ -36,9 +38,20 @@ functions:
           cors: *corsConfig
   orderComplete:
     handler: handler.orderComplete
+    timeout: 300
     events:
       - http:
           path: order-complete
+          method: post
+          cors: *corsConfig
+  deleteOldVariants:
+    handler: handler.deleteOldVariants
+    timeout: 300
+    events:
+      - schedule:
+          rate: rate(1 day)
+      - http:
+          path: delete-old-variants
           method: post
           cors: *corsConfig
 
