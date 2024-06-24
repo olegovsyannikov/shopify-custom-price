@@ -8,6 +8,17 @@ provider:
     SHOPIFY_ACCESS_TOKEN: ${env:SHOPIFY_ACCESS_TOKEN}
     SHOPIFY_STORE_URL: ${env:SHOPIFY_STORE_URL}
 
+custom:
+  corsConfig: &corsConfig
+    origin: '*'
+    headers:
+      - Content-Type
+      - X-Amz-Date
+      - Authorization
+      - X-Api-Key
+      - X-Amz-Security-Token
+      - X-Amz-User-Agent
+
 functions:
   createSizeVariant:
     handler: handler.createSizeVariant
@@ -15,27 +26,21 @@ functions:
       - http:
           path: create-size-variant
           method: post
-          cors:
-            origin: 'https://wallartiful.com'
-            headers:
-              - Content-Type
-              - X-Amz-Date
-              - Authorization
-              - X-Api-Key
-              - X-Amz-Security-Token
-              - X-Amz-User-Agent
+          cors: *corsConfig
   deleteSizeVariant:
     handler: handler.deleteSizeVariant
     events:
       - http:
           path: delete-size-variant
           method: post
+          cors: *corsConfig
   orderComplete:
     handler: handler.orderComplete
     events:
       - http:
           path: order-complete
           method: post
+          cors: *corsConfig
 
 plugins:
   - serverless-offline

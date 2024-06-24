@@ -79,13 +79,11 @@ app.post('/create-size-variant', async (req, res) => {
 
 app.post('/delete-size-variant', async (req, res) => {
   const { variantId } = req.body;
+  if (!variantId) {
+    return res.status(400).json({ error: 'variantId is required' });
+  }
   try {
-    await axios.delete(`${process.env.SHOPIFY_STORE_URL}/admin/api/2021-07/variants/${variantId}.json`, {
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Shopify-Access-Token': process.env.SHOPIFY_ACCESS_TOKEN
-      }
-    });
+    await deleteVariant(variantId);
 
     res.status(204).send();
   } catch (error) {
@@ -97,17 +95,23 @@ app.post('/delete-size-variant', async (req, res) => {
 app.post('/order-complete', async (req, res) => {
   const order = req.body;
   // Iterate through line items and delete size variants
-  order.line_items.forEach(async item => {
-    if (item.variant_id && isSizeVariant(item.variant_id)) { 
+  const deletePromises = order.line_items.map(async item => {
+    console.log('Processing variant: ', item.variant_id);
+    const cropPreviewUrlProperty = item.properties.find(property => property.name === '_cropPreviewUrl');
+    if (item.variant_id && cropPreviewUrlProperty) { 
+      console.log('This is temp size variant. Deleting...');
       await deleteVariant(item.variant_id);
     }
   });
+
+  // Wait for all delete operations to complete
+  await Promise.all(deletePromises);
   res.status(200).send();
 });
 
 
 app.use((req, res, next) => {
-  res.setHeader('Access-Control-Allow-Origin', 'https://wallartiful.com');
+  res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, PUT, PATCH, DELETE');
   res.setHeader('Access-Control-Allow-Headers', 'X-Requested-With,content-type');
   res.setHeader('Access-Control-Allow-Credentials', true);
@@ -117,3 +121,18 @@ app.use((req, res, next) => {
 module.exports.createSizeVariant = serverless(app);
 module.exports.deleteSizeVariant = serverless(app);
 module.exports.orderComplete = serverless(app);
+
+const deleteVariant = async (variantId) => {
+  try {
+    await axios.delete(`${process.env.SHOPIFY_STORE_URL}/admin/api/2021-07/variants/${variantId}.json`, {
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Shopify-Access-Token': process.env.SHOPIFY_ACCESS_TOKEN
+      },
+      timeout: 30000 // Set timeout to 30 seconds
+    });
+    console.log(`Variant ${variantId} deleted successfully.`);
+  } catch (error) {
+    console.error(`Error deleting variant ${variantId}:`, error);
+  }
+};
